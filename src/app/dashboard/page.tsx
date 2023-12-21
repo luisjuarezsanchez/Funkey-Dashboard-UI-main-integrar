@@ -1,15 +1,11 @@
+"use client";
 import { Space } from "antd";
-import Image from "next/image";
+import DashboardLayout from "@/src/components/widgets/DashboardLayout";
 
 function page() {
   return (
     <Space style={{ justifyContent: "center" }}>
-      <Image
-        src="/images/tmp.jpg"
-        alt="Codice Azul Logo"
-        width={1200}
-        height={522}
-      />
+      <DashboardLayout />
     </Space>
   );
 }
