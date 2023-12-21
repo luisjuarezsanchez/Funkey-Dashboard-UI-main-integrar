@@ -1,0 +1,66 @@
+stages:
+  - setup
+  - deploy
+
+variables:
+  # When using dind service, you must instruct docker to talk with the
+  # daemon started inside of the service. The daemon is available with
+  # a network connection instead of the default /var/run/docker.sock socket.
+  #
+  # The 'docker' hostname is the alias of the service container as described at
+  # https://docs.gitlab.com/ee/ci/docker/using_docker_images.html#accessing-the-services
+  #
+  # If you're using GitLab Runner 12.7 or earlier with the Kubernetes executor and Kubernetes 1.6 or earlier,
+  # the variable must be set to tcp://localhost:2375 because of how the
+  # Kubernetes executor connects services to the job container
+  # DOCKER_HOST: tcp://localhost:2375
+  #
+  DOCKER_HOST: tcp://docker:2375
+  #
+  # This instructs Docker not to start over TLS.
+  DOCKER_TLS_CERTDIR: ""
+  # AWS AND ECR STUFF
+  DOCKER_REGISTRY: 140683604096.dkr.ecr.us-east-2.amazonaws.com
+  APP_NAME: funkey_dashboard_ui
+
+setup:
+  stage: setup
+  rules:
+  - if: $CI_COMMIT_TAG
+  image: 
+    name: amazon/aws-cli:latest
+    entrypoint: [""]
+  id_tokens:
+    GITLAB_OIDC_TOKEN:
+      aud: https://gitlab.com
+  script:
+    - >
+      export $(printf "AWS_ACCESS_KEY_ID=%s AWS_SECRET_ACCESS_KEY=%s AWS_SESSION_TOKEN=%s"
+      $(aws sts assume-role-with-web-identity
+      --role-arn ${ROLE_ARN}
+      --role-session-name "GitLabRunner-${CI_PROJECT_ID}-${CI_PIPELINE_ID}"
+      --web-identity-token ${GITLAB_OIDC_TOKEN}
+      --duration-seconds 3600
+      --query 'Credentials.[AccessKeyId,SecretAccessKey,SessionToken]'
+      --output text))
+    - aws sts get-caller-identity
+    - DOCKER_PASSWORD="$(aws ecr get-login-password --region us-east-2)"
+    - echo "DOCKER_PASSWORD=$DOCKER_PASSWORD" >> setup.env
+  artifacts:
+    reports:
+      dotenv: setup.env
+
+deploy:
+  stage: deploy
+  rules:
+  - if: $CI_COMMIT_TAG  
+  image: docker:24.0.5
+  services:
+    - docker:24.0.5-dind               # Run this job when a tag is created
+  before_script:
+    - docker info
+    - docker --version
+    - echo "$DOCKER_PASSWORD" | docker login --username AWS --password-stdin $DOCKER_REGISTRY
+  script:
+    - docker build -t $DOCKER_REGISTRY/$APP_NAME:$CI_PIPELINE_IID .
+    - docker push $DOCKER_REGISTRY/$APP_NAME:$CI_PIPELINE_IID

@@ -1,0 +1,35 @@
+.trigger {
+  padding: 0 24px;
+  font-size: 18px;
+  line-height: 64px;
+  cursor: pointer;
+  transition: color 0.3s;
+  color: red;
+}
+
+.trigger:hover {
+  color: #1890ff;
+}
+
+.logo {
+  display: flex;
+  align-items: center;
+  height: 32px;
+  margin: 16px;
+  font-weight: bold;
+  font-size: 1rem;
+}
+
+.siteLayout .siteLayoutBackground {
+  background: #fff;
+  color: #333;
+}
+
+.layout {
+  height: 100vh;
+}
+
+.containerLayout {
+  height: calc(100vh - 4rem);
+  overflow-y: scroll;
+}
